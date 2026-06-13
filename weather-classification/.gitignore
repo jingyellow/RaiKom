@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 数据集（大文件）
+data/
+!data/.gitkeep
+
+# 模型检查点（大文件）
+#checkpoints/
+#!checkpoints/.gitkeep
+
+# 训练结果
+results/
+!results/.gitkeep
+
+# 日志
+*.log
+
+# TensorBoard
+runs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 模型文件
+*.pth
+*.pt
+*.onnx
+*.h5
