@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 天气图像分类模型训练脚本
-支持：单GPU训练、混合精度训练、学习率调度、早停、TensorBoard日志
+支持：单GPU训练、混合精度训练、学习率调度、早停
 """
 import os
 import sys
@@ -14,7 +14,6 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import numpy as np
 
@@ -114,7 +113,7 @@ def get_best_metric_key(config):
     return metric_name
 
 
-def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device, epoch, config, writer=None):
+def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device, epoch, config):
     """训练一个epoch"""
     model.train()
     metrics = MetricsTracker(num_classes=config["dataset"]["num_classes"], class_names=config["dataset"]["class_names"])
@@ -161,18 +160,11 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device, epo
             "lr": f"{optimizer.param_groups[0]['lr']:.6f}",
         })
 
-        # TensorBoard 记录
-        if writer is not None and step % log_interval == 0:
-            global_step = epoch * len(dataloader) + step
-            writer.add_scalar("Train/Loss", loss.item(), global_step)
-            writer.add_scalar("Train/Accuracy", current_metrics["accuracy"], global_step)
-            writer.add_scalar("Train/LR", optimizer.param_groups[0]["lr"], global_step)
-
     return metrics.compute()
 
 
 @torch.no_grad()
-def validate(model, dataloader, criterion, device, epoch, config, writer=None, split="Val"):
+def validate(model, dataloader, criterion, device, epoch, config, split="Val"):
     """验证/测试"""
     model.eval()
     metrics = MetricsTracker(num_classes=config["dataset"]["num_classes"], class_names=config["dataset"]["class_names"])
@@ -200,19 +192,6 @@ def validate(model, dataloader, criterion, device, epoch, config, writer=None, s
 
     final_metrics = metrics.compute()
 
-    # TensorBoard 记录
-    if writer is not None:
-        writer.add_scalar(f"{split}/Loss", final_metrics["loss"], epoch)
-        writer.add_scalar(f"{split}/Accuracy", final_metrics["accuracy"], epoch)
-        writer.add_scalar(f"{split}/F1_Macro", final_metrics["f1_macro"], epoch)
-        writer.add_scalar(f"{split}/Precision_Macro", final_metrics["precision_macro"], epoch)
-        writer.add_scalar(f"{split}/Recall_Macro", final_metrics["recall_macro"], epoch)
-        for name in config["dataset"]["class_names"]:
-            cls_metrics = final_metrics["per_class"][name]
-            writer.add_scalar(f"{split}/F1/{name}", cls_metrics["f1"], epoch)
-            writer.add_scalar(f"{split}/Precision/{name}", cls_metrics["precision"], epoch)
-            writer.add_scalar(f"{split}/Recall/{name}", cls_metrics["recall"], epoch)
-
     return final_metrics, metrics
 
 
@@ -234,16 +213,11 @@ def main(config_path="configs/config.yaml", device_name=None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     exp_name = f"{config['project']['name']}_{config['model']['backbone']}_{timestamp}"
     checkpoint_dir = Path(config["logging"]["checkpoint_dir"]) / exp_name
-    log_dir = Path(config["logging"]["log_dir"]) / exp_name
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    log_dir.mkdir(parents=True, exist_ok=True)
 
     # 保存配置
     with open(checkpoint_dir / "config.yaml", "w") as f:
         yaml.dump(config, f)
-
-    # TensorBoard
-    writer = SummaryWriter(log_dir=str(log_dir))
 
     # 数据加载
     print("\n[1/4] 加载数据集...")
@@ -292,7 +266,7 @@ def main(config_path="configs/config.yaml", device_name=None):
     for epoch in range(1, config["training"]["epochs"] + 1):
         # 训练
         train_metrics = train_one_epoch(
-            model, train_loader, criterion, optimizer, scaler, device, epoch, config, writer
+            model, train_loader, criterion, optimizer, scaler, device, epoch, config
         )
 
         # 学习率更新
@@ -300,7 +274,7 @@ def main(config_path="configs/config.yaml", device_name=None):
             scheduler.step()
 
         # 验证
-        val_metrics, val_tracker = validate(model, val_loader, criterion, device, epoch, config, writer)
+        val_metrics, val_tracker = validate(model, val_loader, criterion, device, epoch, config)
 
         # ReduceLROnPlateau 调度器
         if isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
@@ -369,10 +343,7 @@ def main(config_path="configs/config.yaml", device_name=None):
     test_tracker.print_classification_report()
     test_tracker.plot_confusion_matrix(save_path=str(checkpoint_dir / "confusion_matrix.png"))
 
-    writer.close()
     print(f"\n所有结果已保存到: {checkpoint_dir}")
-    print(f"TensorBoard日志: {log_dir}")
-    print(f"启动查看: tensorboard --logdir={log_dir}")
 
 
 if __name__ == "__main__":

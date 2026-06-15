@@ -37,9 +37,9 @@ env/
 data/
 !data/.gitkeep
 
-# 模型检查点（大文件）
-#checkpoints/
-#!checkpoints/.gitkeep
+ 模型检查点（大文件）
+checkpoints/
+!checkpoints/.gitkeep
 
 # 训练结果
 results/
