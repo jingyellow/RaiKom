@@ -4,7 +4,7 @@
 project:
   name: "weather-classification"
   seed: 42
-  device: "auto"  # auto: 自动选择 | cuda: 强制 GPU | cpu: 强制 CPU | cuda:0: 指定 GPU
+  device: "cuda"  # auto: 自动选择 | cuda: 强制 GPU | cpu: 强制 CPU | cuda:0: 指定 GPU
   num_workers: 0
 
 # GPU / CPU 差异化配置（根据实际设备自动应用）
@@ -51,7 +51,7 @@ training:
   gradient_clip: 1.0
   early_stopping_patience: 10
   save_best_only: true
-  use_class_weights: true       # 按训练集分布自动加权，提升少数类 F1
+  use_class_weights: false       # 按训练集分布自动加权，提升少数类 F1
   best_metric: "f1_macro"       # 最佳模型选型: f1_macro | accuracy
 
 # 数据增强配置
